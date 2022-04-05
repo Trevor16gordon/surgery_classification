@@ -77,16 +77,22 @@ def train():
             i += 1
 
         # Validation
-        with torch.set_grad_enabled(False):
+        N, val_loss = 0, 0.0
+        model.eval() # evaluate model 
+        with torch.no_grad():
             for local_batch, local_labels in validation_generator:
                 # Transfer to GPU
                 local_batch, local_labels = local_batch.to(device), local_labels.to(device)
+                
+                outputs = model(local_batch)
+                val_loss += criterion(outputs, local_labels)
+                N += 1
 
-                # Model computations
-                print("vallidation computations")
+        model.train()
+        print("Validation Loss: {:2f}".format(val_loss / N))
 
     if args.save_path != '':
-        save(args.save_path, model, optim)
+        save(args.save_path, model, optimizer)
 
 
 def save(path, network, optim):
@@ -98,7 +104,7 @@ def save(path, network, optim):
         path
     )
 
-def load(path network, optim):
+def load(path, network, optim):
     checkpoint = torch.load(path)
     network.load_state_dict(checkpoint['model_state_dict'])
     optim.load_state_dict(checkpoint['optimizer_state_dict'])
