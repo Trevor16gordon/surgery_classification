@@ -15,7 +15,7 @@ def train():
     parser = argparse.ArgumentParser(description='Specify model and training hyperparameters.')
 
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--n_workers', type=int, default=1)
     parser.add_argument('--video_file_path', type=str, default='data/videos')
     parser.add_argument('--image_file_path', type=str, default='data/images')
@@ -88,7 +88,7 @@ def train():
             i += 1
 
         # Validation
-        N, val_loss, val_correct = 0, 0.0, 0.0
+        val_batchs, val_loss, val_correct = 0, 0.0, 0.0
         model.eval() # evaluate model 
         with torch.no_grad():
             for local_batch, local_labels in validation_generator:
@@ -98,16 +98,16 @@ def train():
 
                 val_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
                 val_loss += criterion(outputs, local_labels)
-                N += 1
+                val_batchs += 1
 
         model.train()
-        epoch_time = epoch_start - time.time()
+        epoch_time = int(time.time() - epoch_start)
         secs = epoch_time % 60
         mins = (epoch_time // 60) % 60
         hrs = epoch_time // 3600
 
         print("Validation Loss: {:2f}\t Validation Accuracy: {:2f}\t Run Time: {:02}:{:02}:{:02}".format(
-            val_loss / N, val_correct / (args.batch_size*N), hrs, mins, secs
+            val_loss / N, val_correct / (args.batch_size*val_batchs), hrs, mins, secs
         ))
 
     if args.save_path != '':
