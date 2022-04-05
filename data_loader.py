@@ -5,6 +5,7 @@ import pickle
 import cv2
 import numpy as np
 import pdb
+from torchvision.io import read_image
 
 class SurgeryDataset(torch.utils.data.Dataset):
     """Pytorch dataloader to load single frames at a time.
@@ -13,11 +14,11 @@ class SurgeryDataset(torch.utils.data.Dataset):
         torch (_type_): _description_
     """
 
-    def __init__(self, list_IDs, labels, base_video_path):
+    def __init__(self, list_IDs, labels, base_images_path):
         "Initialization"
         self.labels = labels
         self.list_IDs = list_IDs
-        self.base_video_path = base_video_path
+        self.base_images_path = base_images_path
 
         self.to_tensor = torchvision.transforms.ToTensor() 
         self.center_crop = torchvision.transforms.CenterCrop((480, 768))
@@ -34,16 +35,12 @@ class SurgeryDataset(torch.utils.data.Dataset):
         vid_name, frame_id = ID.split("_vi_")
         frame_id = int(frame_id)
 
-        cap = cv2.VideoCapture(self.base_video_path + "/" + vid_name + ".mp4" )
-        cap.set(1,frame_id)
-        ret, frame = cap.read() 
+        img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
+        X = read_image(img_path)
+        X = X.type(torch.FloatTensor)
 
-        X = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        X = X.astype(np.float32)
-        X = self.to_tensor(X)
-        X = self.center_crop(X)
-        X = self.resize(X)
-            
+        # Size is torch.Size([3, 120, 200])
+
         y = self.labels[ID]
 
         return X, y

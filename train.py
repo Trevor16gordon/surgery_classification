@@ -10,15 +10,16 @@ def train():
     
     parser = argparse.ArgumentParser(description='Specify model and training hyperparameters.')
 
-    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--n_workers', type=int, default=1)
     parser.add_argument('--video_file_path', type=str, default='data/videos')
+    parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--save_path', type=str, default='')
 
     args = parser.parse_args()
 
-    video_filepath_top = args.video_file_path
+    image_filepath_top = args.image_file_path
     # "/Users/trevorgordon/Library/Mobile Documents/com~apple~CloudDocs/Documents/root/Columbia/Spring2022/AdvancedDL/Assignments/assignment2/surgery_classification/data/videos"
 
     label_dict, partition = load_labels()
@@ -36,14 +37,20 @@ def train():
 
 
     # Generators
-    training_set = SurgeryDataset(partition["train"], label_dict, video_filepath_top)
+    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
+
+
+    # training_set.__getitem__(1)
+
     training_generator = torch.utils.data.DataLoader(training_set, **params)
 
-    validation_set = SurgeryDataset(partition["validation"], label_dict, video_filepath_top)
+    validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
     validation_generator = torch.utils.data.DataLoader(validation_set, **params)
     
 
-    model = SimpleConv(input_dim=(3, 120, 192)).to(device)
+    # model = SimpleConv(input_dim=(3, 120, 192)).to(device)
+    model = SimpleConv(input_dim=(3, 120, 200)).to(device)
+    
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
