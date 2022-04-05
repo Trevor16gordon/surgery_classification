@@ -3,6 +3,7 @@
 It will optionally downsample the images
 """
 import argparse
+import os
 import glob
 import cv2
 import tqdm
@@ -24,16 +25,17 @@ new_image_dim = (args.output_image_width, args.output_image_height)
 
 
 for f in tqdm.tqdm(glob.glob(video_filepath_top + "/*")):
-    vid_name = f.split("/")[-1].split(".")[0]
-
+    # Read in the MP4 file from the file of surgery videos
     vidcap = cv2.VideoCapture(f)
-
     success, image = vidcap.read()
     
-
+    # Extract the name of the file excluding the extension (.mp4) and the file path.
+    vid_name = os.path.split(f)[1]
+    vid_name = os.path.splitext(vid_name)[0]
     count = 0
     while success:
         resized = cv2.resize(image, new_image_dim)
-        cv2.imwrite(outfolder + f"/{vid_name}_frame_{count}.jpg", resized)     # save frame as JPEG file      
+        image_file = os.path.join(*outfolder.split('/'), f'{vid_name}_frame_{count}.jpg')
+        cv2.imwrite(image_file, resized)     # save frame as JPEG file      
         success, image = vidcap.read()
         count += 1

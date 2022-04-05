@@ -5,6 +5,10 @@ import torch.optim as optim
 import torch.nn as nn
 
 import argparse
+import time
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def train():
     
@@ -55,12 +59,12 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    running_loss = 0.0
-
+    N = 100 # print evey N mini-batches
     # Loop over epochs
     for epoch in range(max_epochs):
         # Training
-        i = 0
+        epoch_start, i = time.time(), 1
+        running_loss, N_correct  = 0.0, 0.0
         for local_batch, local_labels in training_generator:
             # Transfer to GPU
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
@@ -68,35 +72,43 @@ def train():
             # Train on curent mini-batch 
             outputs = model(local_batch)
             loss = criterion(outputs, local_labels)
+
+            # Keep track of training statistcis 
+            running_loss += loss.item()
+            N_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
+
             loss.backward()
             optimizer.step()
 
-
-            cur_loss = loss.item()
-            print(f"loss is {cur_loss}")
-
             # print statistics
-            running_loss += loss.item()
-            if i % 20 == 19:    # print every 20 mini-batches
-                print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 20:.3f}')
-                running_loss = 0.0
+            if i % N == 0:    # print every N mini-batches
+                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {N_correct / (args.batch_size*N):.3f}')
+                running_loss, N_correct  = 0.0, 0.0
 
             i += 1
 
         # Validation
-        N, val_loss = 0, 0.0
+        N, val_loss, val_correct = 0, 0.0, 0.0
         model.eval() # evaluate model 
         with torch.no_grad():
             for local_batch, local_labels in validation_generator:
                 # Transfer to GPU
                 local_batch, local_labels = local_batch.to(device), local_labels.to(device)
-                
                 outputs = model(local_batch)
+
+                val_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
                 val_loss += criterion(outputs, local_labels)
                 N += 1
 
         model.train()
-        print("Validation Loss: {:2f}".format(val_loss / N))
+        epoch_time = epoch_start - time.time()
+        secs = epoch_time % 60
+        mins = (epoch_time // 60) % 60
+        hrs = epoch_time // 3600
+
+        print("Validation Loss: {:2f}\t Validation Accuracy: {:2f}\t Run Time: {:02}:{:02}:{:02}".format(
+            val_loss / N, val_correct / (args.batch_size*N), hrs, mins, secs
+        ))
 
     if args.save_path != '':
         save(args.save_path, model, optimizer)
