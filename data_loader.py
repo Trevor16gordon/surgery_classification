@@ -1,4 +1,6 @@
 import torch
+import torchvision
+
 import pickle
 import cv2
 import numpy as np
@@ -10,12 +12,16 @@ class SurgeryDataset(torch.utils.data.Dataset):
     Args:
         torch (_type_): _description_
     """
-  
+
     def __init__(self, list_IDs, labels, base_video_path):
         "Initialization"
         self.labels = labels
         self.list_IDs = list_IDs
         self.base_video_path = base_video_path
+
+        self.to_tensor = torchvision.transforms.ToTensor() 
+        self.center_crop = torchvision.transforms.CenterCrop((480, 768))
+        self.resize = torchvision.transforms.Resize((120, 192))
 
     def __len__(self):
         'Denotes the total number of samples'
@@ -31,18 +37,13 @@ class SurgeryDataset(torch.utils.data.Dataset):
         cap = cv2.VideoCapture(self.base_video_path + "/" + vid_name + ".mp4" )
         cap.set(1,frame_id)
         ret, frame = cap.read() 
+
         X = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        try:
-            X = X.reshape((3, 480, 768))
-        except:
-            #TODO: Some videos (not sure how many have shape (480, 854, 3))
-            # Take center frame to make everything (480, 768, 3)
-            # Take the center (854-768)/2
-            X = X[:, 43:-43, :]
-            X = X.reshape((3, 480, 768))
-            
         X = X.astype(np.float32)
-        X = torch.tensor(X)
+        X = self.to_tensor(X)
+        X = self.center_crop(X)
+        X = self.resize(X)
+            
         y = self.labels[ID]
 
         return X, y
