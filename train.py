@@ -34,28 +34,21 @@ def train():
     torch.backends.cudnn.benchmark = True
 
     # Parameters
-    params = {"batch_size": args.batch_size,
-            "shuffle": True,
-            "num_workers": args.n_workers}
+    params = {
+        "batch_size": args.batch_size,
+        "shuffle": True,
+        "num_workers": args.n_workers
+    }
     max_epochs = args.epochs
 
-
-    # Generators
+    # train - validation data Generators
     training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
-
-
-    # training_set.__getitem__(1)
-
     training_generator = torch.utils.data.DataLoader(training_set, **params)
 
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
     validation_generator = torch.utils.data.DataLoader(validation_set, **params)
     
-
-    # model = SimpleConv(input_dim=(3, 120, 192)).to(device)
     model = SimpleConv(input_dim=(3, 120, 200)).to(device)
-    
-
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
@@ -73,14 +66,18 @@ def train():
             outputs = model(local_batch)
             loss = criterion(outputs, local_labels)
 
-            # Keep track of training statistcis 
+            # Keep track of training statistics 
             running_loss += loss.item()
             N_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
 
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # print statistics
+            if i == 0: # stats at start of epoch
+                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss:.3f}, Mean Accuracy: {N_correct / (args.batch_size):.3f}')
+
             if i % N == 0:    # print every N mini-batches
                 print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {N_correct / (args.batch_size*N):.3f}')
                 running_loss, N_correct  = 0.0, 0.0
