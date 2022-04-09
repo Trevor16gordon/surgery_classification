@@ -66,9 +66,16 @@ def predict():
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
-
+    print(pred_ids[0])
     # Predict forward which pull the correct frames
 
+    i = 0 
+    for images, labels predict_generator:
+        images.to(device)
+        labels.to(device) 
+
+        outputs = model(images)
+        preds = torch.argmax(outputs, dim=1)
 
 
     # Change the predict integers to predicted strings
