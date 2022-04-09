@@ -29,7 +29,7 @@ def create_list_of_images_to_predict(base_image_path):
     image_names = []
     for vid_name in video_names:
         f =  os.sep + os.path.join(*base_image_path.split(os.sep), vid_name)
-        image_names = image_names.extend(glob.glob(f + "*"))
+        image_names.extend(glob.glob(f + "*"))
 
     return image_names
 
@@ -52,7 +52,7 @@ def predict():
     model.load_state_dict(checkpoint['model_state_dict'])
 
     pred_ids = create_list_of_images_to_predict(args.image_file_path)
-
+    pdb.set_trace()
     predict_params = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -60,7 +60,7 @@ def predict():
     }
 
     # Using a dummy dict for labels since we don't have that and the dataloader wants it
-    dumy_label_dict = defaultdict(99999)
+    dumy_label_dict = defaultdict(lambda: 99999)
 
     # Creat a dataloader consisting only of these IDs
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
