@@ -22,8 +22,8 @@ def create_list_of_images_to_predict(base_image_path):
     # Single: RALIHR_surgeon03_fps01_0001 (1 video)
     """
     video_names = []
-    video_names += [f"RALIHR_surgeon01_fps01_{i:04d}" for i in range(71, 125)]
-    video_names += [f"RALIHR_surgeon02_fps01_{i:04d}" for i in range(1, 4)]
+    video_names += [f"RALIHR_surgeon01_fps01_{i:04d}" for i in range(71, 126)]
+    video_names += [f"RALIHR_surgeon02_fps01_{i:04d}" for i in range(1, 5)]
     video_names.append("RALIHR_surgeon03_fps01_0001")
 
     image_names = []
