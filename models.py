@@ -1,5 +1,14 @@
 import torch.nn as nn 
 import torch
+import torchvision
+
+
+def get_transfer_learning_model_for_surgery():
+    num_classes = 14
+    pretrained_model = torchvision.models.resnet18(pretrained=True)
+    pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, num_classes)
+    return pretrained_model
+
 
 class SimpleConv(torch.nn.Module):
     def __init__(self, input_dim=(3, 480, 720)):

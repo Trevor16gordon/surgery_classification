@@ -1,5 +1,5 @@
 from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
-from models import SimpleConv
+from models import SimpleConv, get_transfer_learning_model_for_surgery
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -66,7 +66,8 @@ def train():
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
     validation_generator = torch.utils.data.DataLoader(validation_set, **params_val)
     
-    model = SimpleConv(input_dim=(3, 120, 200)).to(device)
+    model = get_transfer_learning_model_for_surgery().to(device)
+    #model = SimpleConv(input_dim=(3, 120, 200)).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
 
