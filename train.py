@@ -47,6 +47,7 @@ def train():
             w=args.class_resampling_weight, 
             batch_size=args.batch_size)
     }
+
     params_val = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -66,6 +67,7 @@ def train():
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
     validation_generator = torch.utils.data.DataLoader(validation_set, **params_val)
     
+    n_classes = 14
     model = get_transfer_learning_model_for_surgery().to(device)
     #model = SimpleConv(input_dim=(3, 120, 200)).to(device)
     criterion = nn.CrossEntropyLoss()
@@ -75,11 +77,13 @@ def train():
     # Loop over epochs
     for epoch in range(max_epochs):
         # Training
-        epoch_start, i = time.time(), 1
+        epoch_start, i = time.time(), 0
         running_loss, N_correct  = 0.0, 0.0
+        confusion_matrix = torch.zeros([n_classes, n_classes])
+
         predict_counts = Counter()
         seen_label_c = Counter()
-        for local_batch, local_labels in tqdm.tqdm(training_generator):
+        for local_batch, local_labels in training_generator:
             # Transfer to GPU
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
 
@@ -89,9 +93,12 @@ def train():
             
             # Keep track of training statistics 
             running_loss += loss.item()
-            chosen = torch.argmax(outputs, dim=1)
-            N_correct += torch.sum(chosen == local_labels)
-            predict_counts += Counter(chosen.cpu().numpy())
+            preds = torch.argmax(outputs, dim=1)
+
+            for t, p in zip(local_labels.view(-1), preds.view(-1)):
+                confusion_matrix[t.long(), p.long()] += 1
+
+            predict_counts += Counter(preds.cpu().numpy())
             seen_label_c += Counter(local_labels.cpu().numpy())
             #print("actual labels seen so far:", seen_label_c, "\tpredicted labels so far: ", predict_counts)
             optimizer.zero_grad()
@@ -100,10 +107,11 @@ def train():
 
             # print statistics
             if i == 0: # stats at start of epoch
-                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss:.3f}, Mean Accuracy: {N_correct / (args.batch_size):.3f}')
+                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
+                print(confusion_matrix)
 
             if i % N == 0:    # print every N mini-batches
-                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {N_correct / (args.batch_size*N):.3f}')
+                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
                 running_loss, N_correct  = 0.0, 0.0
 
             i += 1
