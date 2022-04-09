@@ -10,6 +10,7 @@ import warnings
 import pdb
 import glob
 import os
+import csv
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
@@ -28,11 +29,10 @@ def create_list_of_images_to_predict(base_image_path):
 
     image_names = []
     for vid_name in video_names:
-        f =  os.sep + os.path.join(*base_image_path.split(os.sep), vid_name)
+        f =  os.path.join(*base_image_path.split(os.sep), vid_name)
         image_names.extend(glob.glob(f + "*"))
 
     return image_names
-
 
 
 def predict():
@@ -48,11 +48,10 @@ def predict():
     args = parser.parse_args()
 
     model = get_transfer_learning_model_for_surgery()
-    checkpoint = torch.load(args.input_model_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
+#    checkpoint = torch.load(args.input_model_path)
+#   model.load_state_dict(checkpoint['model_state_dict'])
 
     pred_ids = create_list_of_images_to_predict(args.image_file_path)
-    pdb.set_trace()
     predict_params = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -60,23 +59,30 @@ def predict():
     }
 
     # Using a dummy dict for labels since we don't have that and the dataloader wants it
-    dumy_label_dict = defaultdict(lambda: 99999)
+    dumy_label_dict = defaultdict(spam_label)
 
     # Creat a dataloader consisting only of these IDs
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
-    print(pred_ids[0])
-    # Predict forward which pull the correct frames
-
+    pred_dict = {}
     i = 0 
-    for images, labels predict_generator:
+    for images, _ in predict_generator:
         images.to(device)
-        labels.to(device) 
-
         outputs = model(images)
         preds = torch.argmax(outputs, dim=1)
+        
+        for j in range(preds.shape[0]):
+            vid_id = pred_ids[i].split('\\')[1].split('_')
+            vid_id = f'{int(vid_id[1][-1]):03}-{int(vid_id[2][3:]):04}-{int(vid_id[3]):05}'
+            pred_dict[vid_id] = pred[j]
 
+            i += 1
+
+    with open('predictions.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        for vid_id, pred in pred_dict.items():
+            writer.writerow(vid_id + ', ' + pred)
 
     # Change the predict integers to predicted strings
     # You are required to submit a csv file containing two columns: “Id” and “Predicted”
