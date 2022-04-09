@@ -22,6 +22,22 @@ def create_list_of_images_to_predict(base_image_path):
     # Range: RALIHR_surgeon02_fps01_0001 - RALIHR_surgeon02_fps01_0004 (4 videos)
     # Single: RALIHR_surgeon03_fps01_0001 (1 video)
     """
+
+    if os.path.exists('prediction_ids.csv'):
+        with open('prediction_ids.csv', 'r') as csvfile:
+            reader = csv.reader(f)
+            image_names = list(reader)
+    
+        idx = []
+        file_names = []
+        frame_ids = []
+        for line in image_names:
+            idx.append(line[0])
+            file_names.append(os.path.join(base_image_path, line[1]))
+            file_ids.append(line[2])
+    
+    return idx, files_names, frame_ids
+
     video_names = []
     video_names += [f"RALIHR_surgeon01_fps01_{i:04d}" for i in range(71, 126)]
     video_names += [f"RALIHR_surgeon02_fps01_{i:04d}" for i in range(1, 5)]
@@ -51,7 +67,7 @@ def predict():
 #    checkpoint = torch.load(args.input_model_path)
 #   model.load_state_dict(checkpoint['model_state_dict'])
 
-    pred_ids = create_list_of_images_to_predict(args.image_file_path)
+    idx, files_names, frame_ids = create_list_of_images_to_predict(args.image_file_path)
     predict_params = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -59,7 +75,7 @@ def predict():
     }
 
     # Using a dummy dict for labels since we don't have that and the dataloader wants it
-    dumy_label_dict = defaultdict(spam_label)
+    dumy_label_dict = defaultdict(lambda: 99999)
 
     # Creat a dataloader consisting only of these IDs
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
