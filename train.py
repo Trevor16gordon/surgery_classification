@@ -1,4 +1,4 @@
-from data_loader import SurgeryDataset, load_labels
+from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
 from models import SimpleConv
 import torch
 import torch.optim as optim
@@ -44,7 +44,8 @@ def train():
     max_epochs = args.epochs
 
     # train - validation data Generators
-    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
+    weighted_sampler = get_surgery_balanced_sampler(w=0.5)
+    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top, sampler=weighted_sampler)
     training_generator = torch.utils.data.DataLoader(training_set, **params)
 
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
