@@ -11,44 +11,11 @@ import pdb
 import glob
 import os
 import csv
+import traceback
+import pandas as pd
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
-
-def create_list_of_images_to_predict(base_image_path):
-    """Required to predict these video ranges
-    # All of these videos:
-    # Range: RALIHR_surgeon01_fps01_0071 -  RALIHR_surgeon01_fps01_0125 (55 videos)
-    # Range: RALIHR_surgeon02_fps01_0001 - RALIHR_surgeon02_fps01_0004 (4 videos)
-    # Single: RALIHR_surgeon03_fps01_0001 (1 video)
-    """
-
-    if os.path.exists('prediction_ids.csv'):
-        with open('prediction_ids.csv', 'r') as csvfile:
-            reader = csv.reader(f)
-            image_names = list(reader)
-    
-        idx = []
-        file_names = []
-        frame_ids = []
-        for line in image_names:
-            idx.append(line[0])
-            file_names.append(os.path.join(base_image_path, line[1]))
-            file_ids.append(line[2])
-    
-    return idx, files_names, frame_ids
-
-    video_names = []
-    video_names += [f"RALIHR_surgeon01_fps01_{i:04d}" for i in range(71, 126)]
-    video_names += [f"RALIHR_surgeon02_fps01_{i:04d}" for i in range(1, 5)]
-    video_names.append("RALIHR_surgeon03_fps01_0001")
-
-    image_names = []
-    for vid_name in video_names:
-        f =  os.path.join(*base_image_path.split(os.sep), vid_name)
-        image_names.extend(glob.glob(f + "*"))
-
-    return image_names
 
 
 def predict():
@@ -62,12 +29,29 @@ def predict():
     parser.add_argument('--image_file_path', type=str, default='data/images')
 
     args = parser.parse_args()
+    
+
+    # CUDA for PyTorch
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    torch.backends.cudnn.benchmark = True
 
     model = get_transfer_learning_model_for_surgery()
-#    checkpoint = torch.load(args.input_model_path)
-#   model.load_state_dict(checkpoint['model_state_dict'])
+    checkpoint = torch.load(args.input_model_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
 
-    idx, files_names, frame_ids = create_list_of_images_to_predict(args.image_file_path)
+    label_lookup = pd.read_csv("label_lookup.csv")
+    label_lookup_dict = {k: v for v, k in zip(label_lookup["label"].tolist(), label_lookup["int"].tolist())}
+
+    df = pd.read_csv("prediction_ids.csv")
+    df_save = df.copy()
+    df_save.rename({"target_id": "Id"}, axis=1)
+    df_save["Predicted"] = ""
+    pred_ids = df["our_id"].tolist()
+    target_ids = df["target_id"].tolist()
+
+    target_id_lookup = {k:v for k, v in zip(pred_ids, target_ids)}
+
     predict_params = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -81,24 +65,30 @@ def predict():
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
+    
     pred_dict = {}
     i = 0 
-    for images, _ in predict_generator:
-        images.to(device)
-        outputs = model(images)
-        preds = torch.argmax(outputs, dim=1)
-        
-        for j in range(preds.shape[0]):
-            vid_id = pred_ids[i].split('\\')[1].split('_')
-            vid_id = f'{int(vid_id[1][-1]):03}-{int(vid_id[2][3:]):04}-{int(vid_id[3]):05}'
-            pred_dict[vid_id] = pred[j]
+    for images, _ in tqdm.tqdm(predict_generator):
+        try:
+            images.to(device)
+            outputs = model(images)
+            size_this_batch = outputs.shape[0]
+            preds = torch.argmax(outputs, dim=1)
+            #pdb.set_trace()
+            pred_numpy = preds.cpu().numpy()
+            pred_str = [label_lookup_dict[x] for x in pred_numpy.tolist()]
+            df_save["Predicted"].iloc[i: i + size_this_batch] = pred_str
+            i += size_this_batch
+            break
+        except:
+            df_save = df_save.drop("our_id", axis=1)
+            df_save.to_csv("predictions.csv")
+            traceback.print_exc()
 
-            i += 1
-
-    with open('predictions.csv', 'w') as csvfile:
-        writer = csv.writer(csvfile)
-        for vid_id, pred in pred_dict.items():
-            writer.writerow(vid_id + ', ' + pred)
+    df_save = df_save.drop("our_id", axis=1)
+    if "Unnamed: 0" in df_save.columns:
+        df_save = df_save.drop("Unnamed: 0", axis=1)
+    df_save.to_csv("predictions.csv", index=False)
 
     # Change the predict integers to predicted strings
     # You are required to submit a csv file containing two columns: “Id” and “Predicted”
@@ -118,3 +108,4 @@ def predict():
 
 if __name__ == "__main__":
     predict()
+
