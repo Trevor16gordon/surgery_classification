@@ -8,8 +8,31 @@ import argparse
 import time
 import warnings
 import pdb
-from collections import Counter
+import glob
+import os
+from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
+
+
+def create_list_of_images_to_predict(base_image_path):
+    """Required to predict these video ranges
+    # All of these videos:
+    # Range: RALIHR_surgeon01_fps01_0071 -  RALIHR_surgeon01_fps01_0125 (55 videos)
+    # Range: RALIHR_surgeon02_fps01_0001 - RALIHR_surgeon02_fps01_0004 (4 videos)
+    # Single: RALIHR_surgeon03_fps01_0001 (1 video)
+    """
+    video_names = []
+    video_names += [f"RALIHR_surgeon01_fps01_{i:04d}" for i in range(71, 125)]
+    video_names += [f"RALIHR_surgeon02_fps01_{i:04d}" for i in range(1, 4)]
+    video_names.append("RALIHR_surgeon03_fps01_0001")
+
+    image_names = []
+    for vid_name in video_names:
+        f =  os.sep + os.path.join(*base_image_path.split(os.sep), vid_name)
+        image_names = image_names.extend(glob.glob(f + "*"))
+
+    return image_names
+
 
 
 def predict():
@@ -18,6 +41,9 @@ def predict():
 
     parser.add_argument('--input_model_path', type=str)
     parser.add_argument('--output_prediction_path', type=str)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--n_workers', type=int, default=32)
+    parser.add_argument('--image_file_path', type=str, default='data/images')
 
     args = parser.parse_args()
 
@@ -25,19 +51,24 @@ def predict():
     checkpoint = torch.load(args.input_model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
-    
-    # Load the ID's that we need to predict
-    # All of these videos:
-    # Range: RALIHR_surgeon01_fps01_0071 -  RALIHR_surgeon01_fps01_0125 (55 videos)
-    # Range: RALIHR_surgeon02_fps01_0001 - RALIHR_surgeon02_fps01_0004 (4 videos)
-    # Single: RALIHR_surgeon03_fps01_0001 (1 video)
+    pred_ids = create_list_of_images_to_predict(args.image_file_path)
 
+    predict_params = {
+        "batch_size": args.batch_size,
+        "shuffle": False,
+        "num_workers": args.n_workers,
+    }
+
+    # Using a dummy dict for labels since we don't have that and the dataloader wants it
+    dumy_label_dict = defaultdict(99999)
 
     # Creat a dataloader consisting only of these IDs
+    predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
+    predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
 
     # Predict forward which pull the correct frames
-    
+
 
 
     # Change the predict integers to predicted strings
