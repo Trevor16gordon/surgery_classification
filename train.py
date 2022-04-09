@@ -77,6 +77,7 @@ def train():
         epoch_start, i = time.time(), 1
         running_loss, N_correct  = 0.0, 0.0
         predict_counts = Counter()
+        seen_label_c = Counter()
         for local_batch, local_labels in tqdm.tqdm(training_generator):
             # Transfer to GPU
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
@@ -84,13 +85,14 @@ def train():
             # Train on curent mini-batch 
             outputs = model(local_batch)
             loss = criterion(outputs, local_labels)
-
+            
             # Keep track of training statistics 
             running_loss += loss.item()
             chosen = torch.argmax(outputs, dim=1)
             N_correct += torch.sum(chosen == local_labels)
             predict_counts += Counter(chosen.cpu().numpy())
-            print(predict_counts)
+            seen_label_c += Counter(local_labels.cpu().numpy())
+            #print("actual labels seen so far:", seen_label_c, "\tpredicted labels so far: ", predict_counts)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
