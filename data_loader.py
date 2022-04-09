@@ -57,7 +57,7 @@ def load_labels(label_dict_path="data/partition.pkl", partion_path="data/label_d
       return label_dict, partition
 
 
-def get_surgery_balanced_sampler(w=0.5):
+def get_surgery_balanced_sampler(w=0.5, batch_size=64):
     """Get a pytorch sampler to correct unbalanced classes
 
     This function returns a sampler that is in between an
@@ -108,5 +108,6 @@ def get_surgery_balanced_sampler(w=0.5):
     sampling_weights = sampling_weights / np.sum(sampling_weights)
 
     weights = torch.DoubleTensor(sampling_weights)
-    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+    # TODO: The len of the total dataset 215057 is here
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, 215057)
     return sampler

@@ -38,14 +38,14 @@ def train():
     # Parameters
     params = {
         "batch_size": args.batch_size,
-        "shuffle": True,
-        "num_workers": args.n_workers
+        "shuffle": False,
+        "num_workers": args.n_workers,
+        "sampler": get_surgery_balanced_sampler(w=0, batch_size=args.batch_size)
     }
     max_epochs = args.epochs
 
     # train - validation data Generators
-    weighted_sampler = get_surgery_balanced_sampler(w=0.5)
-    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top, sampler=weighted_sampler)
+    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
     training_generator = torch.utils.data.DataLoader(training_set, **params)
 
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
