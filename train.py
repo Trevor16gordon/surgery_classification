@@ -22,6 +22,7 @@ def train():
     parser.add_argument('--video_file_path', type=str, default='data/videos')
     parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--save_path', type=str, default='')
+    parser.add_argument('--class_resampling_weight', type=float, default=0.5)
 
     args = parser.parse_args()
 
@@ -36,20 +37,34 @@ def train():
     torch.backends.cudnn.benchmark = True
 
     # Parameters
-    params = {
+    params_train = {
         "batch_size": args.batch_size,
         "shuffle": False,
         "num_workers": args.n_workers,
-        "sampler": get_surgery_balanced_sampler(w=0, batch_size=args.batch_size)
+        "sampler": get_surgery_balanced_sampler(
+            partition["train"], 
+            label_dict, 
+            w=args.class_resampling_weight, 
+            batch_size=args.batch_size)
+    }
+    params_val = {
+        "batch_size": args.batch_size,
+        "shuffle": False,
+        "num_workers": args.n_workers,
+        "sampler": get_surgery_balanced_sampler(
+            partition["validation"], 
+            label_dict, 
+            w=args.class_resampling_weight, 
+            batch_size=args.batch_size)
     }
     max_epochs = args.epochs
 
     # train - validation data Generators
     training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
-    training_generator = torch.utils.data.DataLoader(training_set, **params)
+    training_generator = torch.utils.data.DataLoader(training_set, **params_train)
 
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
-    validation_generator = torch.utils.data.DataLoader(validation_set, **params)
+    validation_generator = torch.utils.data.DataLoader(validation_set, **params_val)
     
     model = SimpleConv(input_dim=(3, 120, 200)).to(device)
     criterion = nn.CrossEntropyLoss()
