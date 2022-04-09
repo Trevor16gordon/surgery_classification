@@ -79,7 +79,7 @@ def predict():
             pred_str = [label_lookup_dict[x] for x in pred_numpy.tolist()]
             df_save["Predicted"].iloc[i: i + size_this_batch] = pred_str
             i += size_this_batch
-            break
+            
         except:
             df_save = df_save.drop("our_id", axis=1)
             df_save.to_csv("predictions.csv")
