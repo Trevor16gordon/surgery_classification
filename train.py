@@ -3,10 +3,12 @@ from models import SimpleConv
 import torch
 import torch.optim as optim
 import torch.nn as nn
-
+import tqdm
 import argparse
 import time
 import warnings
+import pdb
+from collections import Counter
 warnings.filterwarnings("ignore")
 
 
@@ -15,8 +17,8 @@ def train():
     parser = argparse.ArgumentParser(description='Specify model and training hyperparameters.')
 
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=128)
-    parser.add_argument('--n_workers', type=int, default=1)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--n_workers', type=int, default=32)
     parser.add_argument('--video_file_path', type=str, default='data/videos')
     parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--save_path', type=str, default='')
@@ -50,15 +52,16 @@ def train():
     
     model = SimpleConv(input_dim=(3, 120, 200)).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
 
-    N = 100 # print evey N mini-batches
+    N = 50 # print evey N mini-batches
     # Loop over epochs
     for epoch in range(max_epochs):
         # Training
         epoch_start, i = time.time(), 1
         running_loss, N_correct  = 0.0, 0.0
-        for local_batch, local_labels in training_generator:
+        predict_counts = Counter()
+        for local_batch, local_labels in tqdm.tqdm(training_generator):
             # Transfer to GPU
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
 
@@ -68,8 +71,10 @@ def train():
 
             # Keep track of training statistics 
             running_loss += loss.item()
-            N_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
-
+            chosen = torch.argmax(outputs, dim=1)
+            N_correct += torch.sum(chosen == local_labels)
+            predict_counts += Counter(chosen.cpu().numpy())
+            print(predict_counts)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
