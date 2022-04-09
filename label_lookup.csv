@@ -1,0 +1,15 @@
+,label,int
+0,adhesiolysis,0
+1,blurry,1
+2,catheter insertion,2
+3,mesh placement,3
+4,mesh positioning,4
+5,out of body,5
+6,peritoneal closure,6
+7,peritoneal scoring,7
+8,positioning suture,8
+9,preperioneal dissection,9
+10,primary hernia repair,10
+11,reduction of hernia,11
+12,stationary idle,12
+13,transitionary idle,13
