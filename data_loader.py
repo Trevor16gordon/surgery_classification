@@ -14,12 +14,20 @@ class SurgeryDataset(torch.utils.data.Dataset):
         torch (_type_): _description_
     """
 
-    def __init__(self, list_IDs, labels, base_images_path, data_augmentation=None):
+    def __init__(self, list_IDs, labels, base_images_path, data_augmentation=False):
         "Initialization"
         self.labels = labels
         self.list_IDs = list_IDs
         self.base_images_path = base_images_path
-        self.augment = data_augmentation
+
+        if data_augmentation:
+            self.augment = transforms.Compose([
+                torchvision.transforms.RandomHorizontalFlip(p=0.25),
+                torchvision.transforms.RandomApply(torchvision.transforms.GaussianBlur(kernel_size, sigma=(0.1, 2.0)), p =0.25),
+                AddGaussianNoise(mean=0.0, std=0.5)
+            ]) 
+        else:
+            self.augment = torch.nn.Identity()
 
     def __len__(self):
         'Denotes the total number of samples'
@@ -35,12 +43,19 @@ class SurgeryDataset(torch.utils.data.Dataset):
         img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
         X = read_image(img_path)
         X = X.type(torch.FloatTensor)
-
+        X = self.augment(X)
         # Size is torch.Size([3, 120, 200])
         y = self.labels[ID] 
 
         return X, y
 
+class AddGaussianNoise:
+    def __init__(self, mean=0.0, std=1.0):
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
 
 def load_labels(label_dict_path="data/partition.pkl", partion_path="data/label_dict.pkl"):
 

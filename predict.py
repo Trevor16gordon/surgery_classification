@@ -16,14 +16,14 @@ import pandas as pd
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
-def save(df):
+def save(df, output_prediction_path):
     df = df.drop("our_id", axis=1)
     if "Unnamed: 0" in df.columns:
         df = df.drop("Unnamed: 0", axis=1)
 
     kaggle_temp = pd.read_csv("kaggle_template.csv")
     df = pd.merge(kaggle_temp.drop("Predicted", axis=1), df, left_on="Id", right_on="Id", how="left")
-    df.to_csv("predictions.csv", index=False)
+    df.to_csv(output_prediction_path, index=False)
 
 
 def predict():
@@ -88,7 +88,7 @@ def predict():
             save(df_save)
             traceback.print_exc()
 
-    save(df_save)
+    save(df_save, args.output_prediction_path)
 
 
 

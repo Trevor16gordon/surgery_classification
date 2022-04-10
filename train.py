@@ -62,7 +62,7 @@ def train():
     max_epochs = args.epochs
 
     # train - validation data Generators
-    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top)
+    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top, data_augmentation=args.data_aug)
     training_generator = torch.utils.data.DataLoader(training_set, **params_train)
 
     validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
@@ -87,6 +87,7 @@ def train():
             now.strftime("%d-%m_%H-%M")                    # date-time of start of training
         ])
     ) + '.pkl'
+
     # ensure that save file is present.
     path = os.path.join('training_history', args.model)
     if not os.path.isfile(path):
@@ -152,7 +153,6 @@ def train():
                 "train_cm": train_cm_hist,
                 "val_loss": val_loss,
                 "val_cm": confusion_matrix,
-
             }
 
     if args.save_path != '':
