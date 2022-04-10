@@ -16,6 +16,14 @@ import pandas as pd
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
+def save(df):
+    df = df.drop("our_id", axis=1)
+    if "Unnamed: 0" in df.columns:
+        df = df.drop("Unnamed: 0", axis=1)
+
+    kaggle_temp = pd.read_csv("kaggle_template.csv")
+    df = pd.merge(kaggle_temp.drop("Predicted", axis=1), df, left_on="Id", right_on="Id", how="left")
+    df.to_csv("predictions.csv", index=False)
 
 
 def predict():
@@ -65,8 +73,6 @@ def predict():
     predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
-    
-    pred_dict = {}
     i = 0 
     for images, _ in tqdm.tqdm(predict_generator):
         try:
@@ -74,35 +80,16 @@ def predict():
             outputs = model(images)
             size_this_batch = outputs.shape[0]
             preds = torch.argmax(outputs, dim=1)
-            #pdb.set_trace()
             pred_numpy = preds.cpu().numpy()
             pred_str = [label_lookup_dict[x] for x in pred_numpy.tolist()]
             df_save["Predicted"].iloc[i: i + size_this_batch] = pred_str
             i += size_this_batch
             
         except:
-            df_save = df_save.drop("our_id", axis=1)
-            df_save.to_csv("predictions.csv")
+            save(df_save)
             traceback.print_exc()
 
-    df_save = df_save.drop("our_id", axis=1)
-    if "Unnamed: 0" in df_save.columns:
-        df_save = df_save.drop("Unnamed: 0", axis=1)
-    df_save.to_csv("predictions.csv", index=False)
-
-    # Change the predict integers to predicted strings
-    # You are required to submit a csv file containing two columns: “Id” and “Predicted”
-    #   Id: This field represents the frame identifier which is created using the following logic
-    #           <surgeon_id [3 chars]>-<sample_id[4 chars]>-<frame_number[5 chars]>
-    #           For example: 001-0071-00001
-    #               Surgeon_id can be either 001, 002, 003 in our case
-    #               Sample_id comes from the last part of file name
-    #               Frame_number comes from time * frame_rate thus, it is the number of seconds elapsed from the start of the video as the frame rate of all videos is 1. 
-    # Note: The frame numbering starts from 1 instead of 0.
-    # All 3 identifier constituents are prepadded with zeros.
-
-
-    
+    save(df_save)
 
 
 
