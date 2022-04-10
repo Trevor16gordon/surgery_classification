@@ -8,6 +8,7 @@ import argparse
 import time
 import warnings
 import shelve
+import os
 from collections import defaultdict
 from datetime import datetime
 warnings.filterwarnings("ignore")
@@ -75,8 +76,7 @@ def train():
 
     
     # Save training metrics for later visualization and degguing. 
-    train_loss_hist, val_loss_hist =  {}, {}
-    train_cm_hist, val_cm_hist = {}, {}
+    train_loss, train_cm_hist = {}, {}
     now = datetime.now()
     metrics_save_path = os.path.join(
         'training_history', 
@@ -90,7 +90,7 @@ def train():
 
     # ensure that save file is present.
     path = os.path.join('training_history', args.model)
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         os.mkdir(path)
 
     N = 50 # print evey N mini-batches
@@ -145,13 +145,12 @@ def train():
             val_loss / val_batches, torch.trace(confusion_matrix) / torch.sum(confusion_matrix), macro_F1, hrs, mins, secs
         ))
 
-        val_loss[i] = running_loss/N
 
         with shelve.open(metrics_save_path) as metrics:
             metrics[epoch] = {
                 "train_loss": train_loss,
                 "train_cm": train_cm_hist,
-                "val_loss": val_loss,
+                "val_loss": val_loss / val_batches,
                 "val_cm": confusion_matrix,
             }
 

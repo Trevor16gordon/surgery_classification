@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import pdb
 from torchvision.io import read_image
+from torchvision import transforms
 
 class SurgeryDataset(torch.utils.data.Dataset):
     """Pytorch dataloader to load single frames at a time.
@@ -22,8 +23,8 @@ class SurgeryDataset(torch.utils.data.Dataset):
 
         if data_augmentation:
             self.augment = transforms.Compose([
-                torchvision.transforms.RandomHorizontalFlip(p=0.25),
-                torchvision.transforms.RandomApply(torchvision.transforms.GaussianBlur(kernel_size, sigma=(0.1, 2.0)), p =0.25),
+                transforms.RandomHorizontalFlip(p=0.25),
+                transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p =0.25),
                 AddGaussianNoise(mean=0.0, std=0.5)
             ]) 
         else:
