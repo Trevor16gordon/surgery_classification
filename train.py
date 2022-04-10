@@ -7,8 +7,9 @@ import tqdm
 import argparse
 import time
 import warnings
-import pdb
-from collections import Counter
+import shelve
+from collections import defaultdict
+from datetime import datetime
 warnings.filterwarnings("ignore")
 
 
@@ -29,8 +30,6 @@ def train():
     args = parser.parse_args()
 
     image_filepath_top = args.image_file_path
-    # "/Users/trevorgordon/Library/Mobile Documents/com~apple~CloudDocs/Documents/root/Columbia/Spring2022/AdvancedDL/Assignments/assignment2/surgery_classification/data/videos"
-
     label_dict, partition = load_labels()
     
     # CUDA for PyTorch
@@ -38,7 +37,7 @@ def train():
     device = torch.device("cuda" if use_cuda else "cpu")
     torch.backends.cudnn.benchmark = True
 
-    # Parameters
+    # data loader parameters
     params_train = {
         "batch_size": args.batch_size,
         "shuffle": False,
@@ -57,7 +56,7 @@ def train():
         "sampler": get_surgery_balanced_sampler(
             partition["validation"], 
             label_dict, 
-            w=args.class_resampling_weight, 
+            w=1.0,
             batch_size=args.batch_size)
     }
     max_epochs = args.epochs
@@ -74,13 +73,27 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    N = 50 # print evey N mini-batches
-    train_loss_hist, val_loss_hist = [], []
-    train_cm_hist, val_cm_hist = [], []
-    # Loop over epochs
-    for epoch in range(max_epochs):
+    
+    # Save training metrics for later visualization and degguing. 
+    train_loss_hist, val_loss_hist =  {}, {}
+    train_cm_hist, val_cm_hist = {}, {}
+    now = datetime.now()
+    metrics_save_path = os.path.join(
+        'training_history', 
+        args.model, 
+        '_'.join([
+            "resample", str(args.class_resampling_weight), # resampling weighting for training data
+            'data_aug_' + ('y' if args.data_aug else 'n'), # was data augmentation used
+            now.strftime("%d-%m_%H-%M")                    # date-time of start of training
+        ])
+    ) + '.pkl'
+    # ensure that save file is present.
+    path = os.path.join('training_history', args.model)
+    if not os.path.isfile(path):
+        os.mkdir(path)
 
-        # Training
+    N = 50 # print evey N mini-batches
+    for epoch in range(max_epochs):
         model.train()
         epoch_start, i, running_loss = time.time(), 0, 0.0
         confusion_matrix = torch.zeros([n_classes, n_classes])
@@ -88,25 +101,24 @@ def train():
             # Transfer to GPU
             local_batch, local_labels = local_batch.to(device), local_labels.to(device)
 
-            # Train on curent mini-batch 
+            # Train on curent mini-batch and store metrics
             outputs = model(local_batch)
             loss = criterion(outputs, local_labels)
-            
-            # Keep track of training statistics 
             running_loss += loss.item()
             confusion_matrix = update_confusion_matrix(confusion_matrix, outputs, local_labels)
-
+            
+            # zero out grads and backprop the loss
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if i % N == 0:    # print every N mini-batches
+            # print every N mini-batches
+            if i % N == 0:    
                 macro_F1, F1, precision, recall = compute_precision_recall_F1(confusion_matrix)
                 print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}, Macro-F1: {macro_F1:.2f}')
-
-                train_loss_hist.append(running_loss/N)
-                train_cm_hist.append(confusion_matrix)
-
+                
+                train_loss[i] = running_loss/N
+                train_cm_hist[i] = confusion_matrix
                 running_loss = 0.0
                 
             i += 1
@@ -132,8 +144,16 @@ def train():
             val_loss / val_batches, torch.trace(confusion_matrix) / torch.sum(confusion_matrix), macro_F1, hrs, mins, secs
         ))
 
-        val_loss_hist.append(val_loss / val_batches)
-        val_cm_hist.append(confusion_matrix)
+        val_loss[i] = running_loss/N
+
+        with shelve.open(metrics_save_path) as metrics:
+            metrics[epoch] = {
+                "train_loss": train_loss,
+                "train_cm": train_cm_hist,
+                "val_loss": val_loss,
+                "val_cm": confusion_matrix,
+
+            }
 
     if args.save_path != '':
         save(args.save_path, model, optimizer)

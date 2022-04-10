@@ -35,11 +35,9 @@ class SurgeryDataset(torch.utils.data.Dataset):
         img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
         X = read_image(img_path)
         X = X.type(torch.FloatTensor)
-        X = self.augment(X) if self.augment is not None else X
 
         # Size is torch.Size([3, 120, 200])
-
-        y = self.labels[ID]
+        y = self.labels[ID] 
 
         return X, y
 
