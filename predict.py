@@ -16,15 +16,27 @@ import pandas as pd
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
-def save(df, output_prediction_path):
+def save(df):
     df = df.drop("our_id", axis=1)
     if "Unnamed: 0" in df.columns:
         df = df.drop("Unnamed: 0", axis=1)
 
     kaggle_temp = pd.read_csv("kaggle_template.csv")
     df = pd.merge(kaggle_temp.drop("Predicted", axis=1), df, left_on="Id", right_on="Id", how="left")
-    df.to_csv(output_prediction_path, index=False)
+    df["VideoID"] = df["Id"].str.slice(0, 8)
+    df_smoothed = df.groupby("VideoID").apply(window_for_one_video)
+    df_smoothed = df_smoothed.drop("VideoID", axis=1)
+    df = df_smoothed
+    df.to_csv("predictions.csv", index=False)
 
+def window_for_one_video(df_sub_in):
+    window_len = 9
+    half_win = 3
+    total_len = len(df_sub_in)
+    for i in range(half_win, total_len-half_win):
+        most_common = df_sub_in["Predicted"].iloc[i:i+window_len].mode()[0]
+        df_sub_in["Predicted"].iloc[i] = most_common
+    return df_sub_in
 
 def predict():
     
