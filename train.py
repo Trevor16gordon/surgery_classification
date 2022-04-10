@@ -19,10 +19,12 @@ def train():
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--n_workers', type=int, default=32)
+    parser.add_argument('--class_resampling_weight', type=float, default=0.5)
     parser.add_argument('--video_file_path', type=str, default='data/videos')
     parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--save_path', type=str, default='')
-    parser.add_argument('--class_resampling_weight', type=float, default=0.5)
+    parser.add_argument('--model', type=str, default='resnet18')
+    parser.add_argument('--data_aug', type=bool, default=False)
 
     args = parser.parse_args()
 
@@ -68,12 +70,11 @@ def train():
     validation_generator = torch.utils.data.DataLoader(validation_set, **params_val)
     
     n_classes = 14
-    model = get_transfer_learning_model_for_surgery().to(device)
-    #model = SimpleConv(input_dim=(3, 120, 200)).to(device)
+    model = get_transfer_learning_model_for_surgery(args.model).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-4)
 
-    N = 50 # print evey N mini-batches
+    N = 100 # print evey N mini-batches
     # Loop over epochs
     for epoch in range(max_epochs):
         # Training
@@ -108,16 +109,16 @@ def train():
             # print statistics
             if i == 0: # stats at start of epoch
                 print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
-                print(confusion_matrix)
 
-            if i % N == 0:    # print every N mini-batches
+            if i % N == 0 and 0 < i:    # print every N mini-batches
                 print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
                 running_loss, N_correct  = 0.0, 0.0
 
             i += 1
 
         # Validation
-        val_batchs, val_loss, val_correct = 0, 0.0, 0.0
+        val_batchs, val_loss = 0, 0.0
+        confusion_matrix = torch.zeros([n_classes, n_classes])
         model.eval() # evaluate model 
         with torch.no_grad():
             for local_batch, local_labels in validation_generator:
@@ -125,8 +126,11 @@ def train():
                 local_batch, local_labels = local_batch.to(device), local_labels.to(device)
                 outputs = model(local_batch)
 
-                val_correct += torch.sum(torch.argmax(outputs, dim=1) == local_labels)
                 val_loss += criterion(outputs, local_labels)
+                # update confusion matrix
+                for t, p in zip(local_labels.view(-1), preds.view(-1)):
+                    confusion_matrix[t.long(), p.long()] += 1
+
                 val_batchs += 1
 
         model.train()
@@ -135,8 +139,15 @@ def train():
         mins = (epoch_time // 60) % 60
         hrs = epoch_time // 3600
 
-        print("Validation Loss: {:2f}\t Validation Accuracy: {:2f}\t Run Time: {:02}:{:02}:{:02}".format(
-            val_loss / N, val_correct / (args.batch_size*val_batchs), hrs, mins, secs
+        # calculate precision, recall, & F1
+        recall = torch.diag(confusion_matrix) / torch.sum(confusion_matrix, axis = 1)
+        precision = torch.diag(confusion_matrix) / torch.sum(confusion_matrix, axis = 0)
+        F1_score = 2*(precision * recall)/(precision + recall)
+
+        macro_F1 = torch.mean(F1_score)
+
+        print("Validation Loss: {:2f}\t Validation Accuracy: {:2f}\t Validation Macro-F1: {:.2f}\tRun Time: {:02}:{:02}:{:02}".format(
+            val_loss / N, torch.trace(confusion_matrix) / torch.sum(confusion_matrix), macro_F1, hrs, mins, secs
         ))
 
     if args.save_path != '':

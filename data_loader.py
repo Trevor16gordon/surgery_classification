@@ -14,15 +14,12 @@ class SurgeryDataset(torch.utils.data.Dataset):
         torch (_type_): _description_
     """
 
-    def __init__(self, list_IDs, labels, base_images_path):
+    def __init__(self, list_IDs, labels, base_images_path, data_augmentation=None):
         "Initialization"
         self.labels = labels
         self.list_IDs = list_IDs
         self.base_images_path = base_images_path
-
-        self.to_tensor = torchvision.transforms.ToTensor() 
-        self.center_crop = torchvision.transforms.CenterCrop((480, 768))
-        self.resize = torchvision.transforms.Resize((120, 192))
+        self.augment = data_augmentation
 
     def __len__(self):
         'Denotes the total number of samples'
@@ -38,6 +35,7 @@ class SurgeryDataset(torch.utils.data.Dataset):
         img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
         X = read_image(img_path)
         X = X.type(torch.FloatTensor)
+        X = self.augment(X) if self.augment is not None else X
 
         # Size is torch.Size([3, 120, 200])
 

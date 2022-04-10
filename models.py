@@ -3,10 +3,17 @@ import torch
 import torchvision
 
 
-def get_transfer_learning_model_for_surgery():
+def get_transfer_learning_model_for_surgery(model='resnet18'):
     num_classes = 14
-    pretrained_model = torchvision.models.resnet18(pretrained=True)
-    pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, num_classes)
+
+    if model.lower() == 'resnet18':
+        pretrained_model = torchvision.models.resnet18(pretrained=True)
+        pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, num_classes)
+
+    else:
+        pretrained_model = torchvision.models.regnet_y_3_2gf(pretrained=True)
+        pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, num_classes)
+
     return pretrained_model
 
 
@@ -61,7 +68,7 @@ class SimpleConv(torch.nn.Module):
         for fc in self.fc_layers:
             x = self.relu(fc(x))
 
-        return self.softmax(x)
+        return x
 
     def store_grad_norms(self):
         '''Stores the gradient norms for debugging.'''
