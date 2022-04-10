@@ -67,10 +67,10 @@ def predict():
     }
 
     # Using a dummy dict for labels since we don't have that and the dataloader wants it
-    dumy_label_dict = defaultdict(lambda: 99999)
+    dummy_label_dict = {id:999 for id in pred_ids}
 
     # Creat a dataloader consisting only of these IDs
-    predict_set = SurgeryDataset(pred_ids, dumy_label_dict, args.image_file_path)
+    predict_set = SurgeryDataset(pred_ids, dummy_label_dict, args.image_file_path)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
     i = 0 
