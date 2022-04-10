@@ -72,14 +72,14 @@ def train():
     n_classes = 14
     model = get_transfer_learning_model_for_surgery(args.model).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    N = 100 # print evey N mini-batches
+    N = 50 # print evey N mini-batches
     # Loop over epochs
     for epoch in range(max_epochs):
         # Training
         epoch_start, i = time.time(), 0
-        running_loss, N_correct  = 0.0, 0.0
+        running_loss  = 0.0
         confusion_matrix = torch.zeros([n_classes, n_classes])
 
         predict_counts = Counter()
@@ -106,13 +106,15 @@ def train():
             loss.backward()
             optimizer.step()
 
-            # print statistics
-            if i == 0: # stats at start of epoch
-                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
 
-            if i % N == 0 and 0 < i:    # print every N mini-batches
-                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}')
-                running_loss, N_correct  = 0.0, 0.0
+            if i % N == 0:    # print every N mini-batches
+                recall = torch.diag(confusion_matrix) / (torch.sum(confusion_matrix, axis = 1) + 1e-6)
+                precision = torch.diag(confusion_matrix) / (torch.sum(confusion_matrix, axis = 0) + 1e-6)
+                F1_score = 2*(precision * recall)/(precision + recall + 1e-6)
+                macro_F1 = torch.sum(F1_score) / torch.count_nonzero(F1_score)
+
+                print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}, Macro-F1: {macro_F1:.2f}')
+                running_loss = 0.0
 
             i += 1
 
@@ -140,11 +142,10 @@ def train():
         hrs = epoch_time // 3600
 
         # calculate precision, recall, & F1
-        recall = torch.diag(confusion_matrix) / torch.sum(confusion_matrix, axis = 1)
-        precision = torch.diag(confusion_matrix) / torch.sum(confusion_matrix, axis = 0)
-        F1_score = 2*(precision * recall)/(precision + recall)
-
-        macro_F1 = torch.mean(F1_score)
+        recall = torch.diag(confusion_matrix) / (torch.sum(confusion_matrix, axis = 1) + 1e-6)
+        precision = torch.diag(confusion_matrix) / (torch.sum(confusion_matrix, axis = 0) + 1e-6)
+        F1_score = 2*(precision * recall)/(precision + recall + 1e-6)
+        macro_F1 = torch.sum(F1_score) / torch.count_nonzero(F1_score)
 
         print("Validation Loss: {:2f}\t Validation Accuracy: {:2f}\t Validation Macro-F1: {:.2f}\tRun Time: {:02}:{:02}:{:02}".format(
             val_loss / N, torch.trace(confusion_matrix) / torch.sum(confusion_matrix), macro_F1, hrs, mins, secs

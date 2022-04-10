@@ -35,16 +35,16 @@ def predict():
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--n_workers', type=int, default=32)
     parser.add_argument('--image_file_path', type=str, default='data/images')
+    parser.add_argument('--model', type=str, default='resnet18')
 
     args = parser.parse_args()
-    
 
     # CUDA for PyTorch
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     torch.backends.cudnn.benchmark = True
 
-    model = get_transfer_learning_model_for_surgery()
+    model = get_transfer_learning_model_for_surgery(args.model)
     checkpoint = torch.load(args.input_model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
