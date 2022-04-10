@@ -53,7 +53,7 @@ def predict():
 
     df = pd.read_csv("prediction_ids.csv")
     df_save = df.copy()
-    df_save.rename({"target_id": "Id"}, axis=1)
+    df_save = df_save.rename({"target_id": "Id"}, axis=1)
     df_save["Predicted"] = ""
     pred_ids = df["our_id"].tolist()
     target_ids = df["target_id"].tolist()
@@ -83,8 +83,7 @@ def predict():
             pred_numpy = preds.cpu().numpy()
             pred_str = [label_lookup_dict[x] for x in pred_numpy.tolist()]
             df_save["Predicted"].iloc[i: i + size_this_batch] = pred_str
-            i += size_this_batch
-            
+            i += size_this_batch            
         except:
             save(df_save)
             traceback.print_exc()
