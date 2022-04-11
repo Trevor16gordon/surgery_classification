@@ -72,7 +72,7 @@ def train():
     n_classes = 14
     model = get_transfer_learning_model_for_surgery(args.model).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
     
     # Save training metrics for later visualization and degguing. 
@@ -86,7 +86,8 @@ def train():
             'data_aug_' + ('y' if args.data_aug else 'n'), # was data augmentation used
             now.strftime("%d-%m_%H-%M")                    # date-time of start of training
         ])
-    ) + '.pkl'
+    ) 
+
 
     # ensure that save file is present.
     path = os.path.join('training_history', args.model)
@@ -146,12 +147,12 @@ def train():
         ))
 
 
-        with shelve.open(metrics_save_path) as metrics:
-            metrics[epoch] = {
+        with shelve.open(metrics_save_path, writeback=True) as metrics:
+            metrics[str(epoch)] = {
                 "train_loss": train_loss,
                 "train_cm": train_cm_hist,
                 "val_loss": val_loss / val_batches,
-                "val_cm": confusion_matrix,
+                "val_cm": confusion_matrix
             }
 
     if args.save_path != '':
