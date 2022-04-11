@@ -17,7 +17,6 @@ def get_transfer_learning_model_for_surgery(model='resnet18'):
         pretrained_model = torchvision.models.resnet50(pretrained=True)
         pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, num_classes)
         
-        print(pretrained_model.layer4)
         for param in pretrained_model.layer4.parameters():
             param.requires_grad = True
 
@@ -65,7 +64,6 @@ class SimpleConv(torch.nn.Module):
             self.fc_layers.append(fc_layer)
             setattr(self, f'fc_layer_{i}', fc_layer)
 
-        self.softmax = nn.Softmax()
         self.flatten = nn.Flatten()
         self.relu = nn.ReLU()
      

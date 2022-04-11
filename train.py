@@ -1,5 +1,7 @@
 from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
 from models import SimpleConv, get_transfer_learning_model_for_surgery
+from loss import F1_Loss
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -26,6 +28,7 @@ def train():
     parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--save_path', type=str, default='')
     parser.add_argument('--model', type=str, default='resnet18')
+    parser.add_argument('--loss', type=str, default='cce')
     parser.add_argument('--data_aug', type=bool, default=False)
 
     args = parser.parse_args()
@@ -71,7 +74,13 @@ def train():
     
     n_classes = 14
     model = get_transfer_learning_model_for_surgery(args.model).to(device)
-    criterion = nn.CrossEntropyLoss()
+    
+    # select the desired loss function
+    if args.loss == 'cce':
+        criterion = nn.CrossEntropyLoss()
+    else:
+        criterion = F1_Loss()
+
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
     
@@ -84,7 +93,7 @@ def train():
         '_'.join([
             "resample", str(args.class_resampling_weight), # resampling weighting for training data
             'data_aug_' + ('y' if args.data_aug else 'n'), # was data augmentation used
-            now.strftime("%d-%m_%H-%M")                    # date-time of start of training
+            now.strftime("%d-%m:%H-%M")                    # date-time of start of training
         ])
     ) 
 
