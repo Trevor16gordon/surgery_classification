@@ -27,9 +27,9 @@ class SurgeryDataset(torch.utils.data.Dataset):
         if data_augmentation:
             self.augment = transforms.Compose([
                 transforms.RandomHorizontalFlip(p=0.25 if n_frames==1 else 0.0),
-                transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p =0.2),
-                transforms.RandomApply([transforms.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.25)], p=0.2),
-                AddGaussianNoise(mean=0.0, std=0.75)
+                transforms.RandomApply([transforms.GaussianBlur(3, sigma=(0.1, 2.0))], p =0.25),
+                transforms.RandomApply([transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5)], p=0.25),
+                AddGaussianNoise(mean=0.0, std=1.0)
             ]) 
         else:
             self.augment = torch.nn.Identity()
