@@ -1,5 +1,5 @@
 from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
-from models import SimpleConv, get_transfer_learning_model_for_surgery
+from models import SimpleConv, get_transfer_learning_model_for_surgery, visionTCN
 from loss import F1_Loss
 
 import torch
@@ -23,6 +23,7 @@ def train():
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--n_workers', type=int, default=32)
+    parser.add_argument('--n_frames', type=int, default=1)
     parser.add_argument('--class_resampling_weight', type=float, default=0.5)
     parser.add_argument('--video_file_path', type=str, default='data/videos')
     parser.add_argument('--image_file_path', type=str, default='data/images')
@@ -66,14 +67,18 @@ def train():
     max_epochs = args.epochs
 
     # train - validation data Generators
-    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top, data_augmentation=args.data_aug)
+    training_set = SurgeryDataset(partition["train"], label_dict, image_filepath_top, data_augmentation=args.data_aug, n_frames=args.n_frames)
     training_generator = torch.utils.data.DataLoader(training_set, **params_train)
 
-    validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top)
+    validation_set = SurgeryDataset(partition["validation"], label_dict, image_filepath_top, n_frames=args.n_frames)
     validation_generator = torch.utils.data.DataLoader(validation_set, **params_val)
     
     n_classes = 14
-    model = get_transfer_learning_model_for_surgery(args.model).to(device)
+
+    if args.model == 'tcn':
+        model = visionTCN(256, [256, 256, 256], 4).to(device)
+    else:
+        model = get_transfer_learning_model_for_surgery(args.model).to(device)
     
     # select the desired loss function
     if args.loss == 'cce':

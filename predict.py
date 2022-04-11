@@ -42,11 +42,12 @@ def predict():
     
     parser = argparse.ArgumentParser(description='Specify model and training hyperparameters.')
 
-    parser.add_argument('--input_model_path', type=str)
-    parser.add_argument('--output_prediction_path', type=str)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--n_workers', type=int, default=32)
+    parser.add_argument('--n_frames', type=int, default=1)
     parser.add_argument('--image_file_path', type=str, default='data/images')
+    parser.add_argument('--input_model_path', type=str)
+    parser.add_argument('--output_prediction_path', type=str)
     parser.add_argument('--model', type=str, default='resnet18')
 
     args = parser.parse_args()
@@ -82,7 +83,7 @@ def predict():
     dummy_label_dict = {id:999 for id in pred_ids}
 
     # Creat a dataloader consisting only of these IDs
-    predict_set = SurgeryDataset(pred_ids, dummy_label_dict, args.image_file_path)
+    predict_set = SurgeryDataset(pred_ids, dummy_label_dict, args.image_file_path, n_frames=args.n_frames)
     predict_generator = torch.utils.data.DataLoader(predict_set, **predict_params)
 
     i = 0 
@@ -97,7 +98,7 @@ def predict():
             df_save["Predicted"].iloc[i: i + size_this_batch] = pred_str
             i += size_this_batch            
         except:
-            save(df_save)
+            save(df_save, args.output_prediction_path)
             traceback.print_exc()
 
     save(df_save, args.output_prediction_path)

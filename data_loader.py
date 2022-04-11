@@ -15,11 +15,14 @@ class SurgeryDataset(torch.utils.data.Dataset):
         torch (_type_): _description_
     """
 
-    def __init__(self, list_IDs, labels, base_images_path, data_augmentation=False):
+    def __init__(self, list_IDs, labels, base_images_path, data_augmentation=False, n_frames=1, frame_dim=(3,120,200)):
         "Initialization"
         self.labels = labels
         self.list_IDs = list_IDs
         self.base_images_path = base_images_path
+
+        self.frame_dim = frame_dim
+        self.n_frames = n_frames
 
         if data_augmentation:
             self.augment = transforms.Compose([
@@ -36,19 +39,30 @@ class SurgeryDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         'Generates one sample of data'
-        # Select sample
-        ID = self.list_IDs[index]
-        vid_name, frame_id = ID.split("_vi_")
-        frame_id = int(frame_id)
+        # Select ID of the final frame in the sample and initialize frames tensor
+        IDs = self.list_IDs[index-self.n_frames: index]
+        frames = torch.zeros([self.n_frames, *self.frame_dim])
+        label_vid_name = IDs[-1].split("_vi_")[0] # the videoname of the last frame
 
-        img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
-        X = read_image(img_path)
-        X = X.type(torch.FloatTensor)
-        X = self.augment(X)
-        # Size is torch.Size([3, 120, 200])
-        y = self.labels[ID] 
+        # for each of the previous frames with matching
+        for i, ID in enumerate(IDs):
+            vid_name, frame_id = ID.split("_vi_")
+            
+            # if the i^th frame is from a previous video, then we leave that frame as zeros
+            if vid_name != label_vid_name:
+                next
 
-        return X, y
+            frame_id = int(frame_id)
+            img_path = f"{self.base_images_path}/{vid_name}_frame_{frame_id}.jpg"
+
+            # read in next frame, augment, and add to frames
+            X = read_image(img_path)
+            X = X.type(torch.FloatTensor)
+            X = self.augment(X)
+            frames[i] = X
+            
+        y = self.labels[self.list_IDs[index]]
+        return frames.squeeze(), y
 
 class AddGaussianNoise:
     def __init__(self, mean=0.0, std=1.0):
