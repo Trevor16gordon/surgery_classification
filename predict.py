@@ -60,6 +60,7 @@ def predict():
     model = get_transfer_learning_model_for_surgery(args.model)
     checkpoint = torch.load(args.input_model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
 
     label_lookup = pd.read_csv("label_lookup.csv")
     label_lookup_dict = {k: v for v, k in zip(label_lookup["label"].tolist(), label_lookup["int"].tolist())}
