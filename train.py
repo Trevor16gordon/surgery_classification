@@ -125,7 +125,7 @@ def train():
             i += 1
 
         # Validation
-        val_batchs, val_loss = 0, 0.0
+        val_batches, val_loss = 0, 0.0
         confusion_matrix = torch.zeros([n_classes, n_classes])
         model.eval() # evaluate model 
         with torch.no_grad():
