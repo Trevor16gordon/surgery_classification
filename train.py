@@ -95,6 +95,7 @@ def train():
         os.mkdir(path)
 
     N = 50 # print evey N mini-batches
+    metrics = shelve.open(metrics_save_path, writeback=True) 
     for epoch in range(max_epochs):
         model.train()
         epoch_start, i, running_loss = time.time(), 0, 0.0
@@ -147,14 +148,15 @@ def train():
         ))
 
 
-        with shelve.open(metrics_save_path, writeback=True) as metrics:
-            metrics[str(epoch)] = {
-                "train_loss": train_loss,
-                "train_cm": train_cm_hist,
-                "val_loss": val_loss / val_batches,
-                "val_cm": confusion_matrix
-            }
+        metrics[str(epoch)] = {
+            "train_loss": train_loss,
+            "train_cm": train_cm_hist,
+            "val_loss": val_loss / val_batches,
+            "val_cm": confusion_matrix
+        }
+        metrics.sync()
 
+    metrics.close()
     if args.save_path != '':
         save(args.save_path, model, optimizer)
 

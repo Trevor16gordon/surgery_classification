@@ -16,7 +16,7 @@ import pandas as pd
 from collections import Counter, defaultdict
 warnings.filterwarnings("ignore")
 
-def save(df):
+def save(df, output_path):
     df = df.drop("our_id", axis=1)
     if "Unnamed: 0" in df.columns:
         df = df.drop("Unnamed: 0", axis=1)
@@ -27,7 +27,7 @@ def save(df):
     df_smoothed = df.groupby("VideoID").apply(window_for_one_video)
     df_smoothed = df_smoothed.drop("VideoID", axis=1)
     df = df_smoothed
-    df.to_csv("predictions.csv", index=False)
+    df.to_csv(output_path, index=False)
 
 def window_for_one_video(df_sub_in):
     window_len = 9
