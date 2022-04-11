@@ -1,5 +1,5 @@
 from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
-from models import SimpleConv, get_transfer_learning_model_for_surgery
+from models import SimpleConv, get_transfer_learning_model_for_surgery, visionTCN
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -58,12 +58,13 @@ def predict():
     torch.backends.cudnn.benchmark = True
 
     if args.model == 'tcn':
-        model = visionTCN(512, [512, 512, 1024], kernel_size=4, dropout=0.3, n_frames=args.n_frames).to(device)
+        model = visionTCN(512, [512, 512, 1024], kernel_size=4, dropout=0.3, n_frames=args.n_frames)
     else:
-        model = get_transfer_learning_model_for_surgery(args.model).to(device)
+        model = get_transfer_learning_model_for_surgery(args.model)
     
     checkpoint = torch.load(args.input_model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
     model.eval()
 
     label_lookup = pd.read_csv("label_lookup.csv")
@@ -94,7 +95,7 @@ def predict():
     i = 0 
     for images, _ in tqdm.tqdm(predict_generator):
         try:
-            images.to(device)
+            images = images.to(device)
             outputs = model(images)
             size_this_batch = outputs.shape[0]
             preds = torch.argmax(outputs, dim=1)
