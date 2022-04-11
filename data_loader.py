@@ -40,11 +40,15 @@ class SurgeryDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         'Generates one sample of data'
         # Select ID of the final frame in the sample and initialize frames tensor
-        IDs = self.list_IDs[index-self.n_frames: index]
+        start_index, end_index = max(0, index-self.n_frames+1), index+1
+        IDs = self.list_IDs[start_index:end_index]
         frames = torch.zeros([self.n_frames, *self.frame_dim])
-        label_vid_name = IDs[-1].split("_vi_")[0] # the videoname of the last frame
+
+        label_vid_name = IDs[-1]
+        label_vid_name = label_vid_name.split("_vi_")[0] # the videoname of the last frame
 
         # for each of the previous frames with matching
+        offset = abs(min(index-self.n_frames+1, 0)) # handle edge case when index < n_frames
         for i, ID in enumerate(IDs):
             vid_name, frame_id = ID.split("_vi_")
             
@@ -59,7 +63,7 @@ class SurgeryDataset(torch.utils.data.Dataset):
             X = read_image(img_path)
             X = X.type(torch.FloatTensor)
             X = self.augment(X)
-            frames[i] = X
+            frames[i + offset] = X
             
         y = self.labels[self.list_IDs[index]]
         return frames.squeeze(), y

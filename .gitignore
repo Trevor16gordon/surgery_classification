@@ -1,2 +1,5 @@
 images
 videos
+training_history/*
+predictions*
+*.pt

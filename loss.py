@@ -11,12 +11,13 @@ class F1_Loss(nn.Module):
     - https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
     '''
 
-    def __init__(self, epsilon=1e-7):
+    def __init__(self, epsilon=1e-7, n_classes=14):
         super().__init__()
         self.epsilon = epsilon
+        self.n_classes = n_classes
 
     def forward(self, y_pred, y_true):
-        y_true = F.one_hot(y_true, 2).to(torch.float32)
+        y_true = F.one_hot(y_true, self.n_classes).to(torch.float32)
         y_pred = F.softmax(y_pred, dim=1)
 
         tp = (y_true * y_pred).sum(dim=0).to(torch.float32)
@@ -29,4 +30,4 @@ class F1_Loss(nn.Module):
         
         f1 = 2* (precision*recall) / (precision + recall + self.epsilon)
         f1 = f1.clamp(min=self.epsilon, max=1-self.epsilon)
-        return 1 - f1.mean()
+        return 1 / (f1.mean() + self.epsilon)

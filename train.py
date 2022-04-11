@@ -76,7 +76,7 @@ def train():
     n_classes = 14
 
     if args.model == 'tcn':
-        model = visionTCN(256, [256, 256, 256], 4).to(device)
+        model = visionTCN(512, [512, 512, 1024], kernel_size=4, dropout=0.3, n_frames=args.n_frames).to(device)
     else:
         model = get_transfer_learning_model_for_surgery(args.model).to(device)
     
@@ -134,7 +134,7 @@ def train():
                 macro_F1, F1, precision, recall = compute_precision_recall_F1(confusion_matrix)
                 print(f'Epoch: {epoch + 1}, Mini-Batch:{i :5d}, Mean loss: {running_loss / N:.3f}, Mean Accuracy: {torch.trace(confusion_matrix) / torch.sum(confusion_matrix):.3f}, Macro-F1: {macro_F1:.2f}')
                 
-                train_loss[i] = running_loss/N
+                train_loss[i] = running_loss/ (N if 0 < i else 1)
                 train_cm_hist[i] = confusion_matrix
                 running_loss = 0.0
                 
