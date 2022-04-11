@@ -87,7 +87,7 @@ def train():
         criterion = F1_Loss()
 
     optimizer = optim.Adam(model.parameters(), lr=0.0005)
-
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.5)
     
     # Save training metrics for later visualization and degguing. 
     train_loss, train_cm_hist = {}, {}
@@ -139,6 +139,9 @@ def train():
                 running_loss = 0.0
                 
             i += 1
+
+        # decay learning rate
+        scheduler.step() 
 
         # Validation
         val_batches, val_loss = 0, 0.0
