@@ -47,7 +47,7 @@ def predict():
     parser.add_argument('--n_frames', type=int, default=1)
     parser.add_argument('--image_file_path', type=str, default='data/images')
     parser.add_argument('--input_model_path', type=str)
-    parser.add_argument('--output_prediction_path', type=str)
+    parser.add_argument('--output_prediction_path', type=str, default='predictions.csv')
     parser.add_argument('--model', type=str, default='resnet18')
 
     args = parser.parse_args()
