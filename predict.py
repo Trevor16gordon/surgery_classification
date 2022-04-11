@@ -57,7 +57,11 @@ def predict():
     device = torch.device("cuda" if use_cuda else "cpu")
     torch.backends.cudnn.benchmark = True
 
-    model = get_transfer_learning_model_for_surgery(args.model)
+    if args.model == 'tcn':
+        model = visionTCN(512, [512, 512, 1024], kernel_size=4, dropout=0.3, n_frames=args.n_frames).to(device)
+    else:
+        model = get_transfer_learning_model_for_surgery(args.model).to(device)
+    
     checkpoint = torch.load(args.input_model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
