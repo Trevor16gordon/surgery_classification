@@ -1,6 +1,8 @@
 # Surgery Video Classification
 This repo contains files and results for predicting the phase of a surgery based on the video images of the surgery.
 
+Please see report.pdf for more details
+
 Abstract: Automatic surgical phase recognition is a challenging task with the potential to to increase patient safety, reduce surgical errors and optimize the communication in the operating room. Surgical phase recognition can provide physicians with early warnings in cases of deviations and anomalies, as well as providing crucial information for archiving, educational and post-operative patient-monitoring purposes. We first attempt to address this issue by posing the problem as an image recognition task, and find that remarkably high performance is possible even without utilizing temporal features captured by sequence models such as recurrent neural networks. Our approach focuses on fine tuning pre-trained convolutional neural networks (CNNs) to perform surgical phase classification on a set of lacroscopic surgery videos. To further improve model performance and generalization, we evaluate the use of data-augmentation, balanced classes sampling, alter- nate classification loss-functions, and label-smoothing. Finally, to incorporate the temporal nature of the prob- lem, we follow the approach of Czempiel et al. (2020) by utilizing Temporal Convolutional Network (Lea et al. (2016)) in conjunction with a pre-trained ResNet50 as a visual feature extractor. With the approaches outlined above we were able to achieve a test loss of 79.5%.
 
 # Installation
