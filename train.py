@@ -1,5 +1,5 @@
 from data_loader import SurgeryDataset, load_labels, get_surgery_balanced_sampler
-from models import SimpleConv, get_transfer_learning_model_for_surgery, visionTCN
+from models import SimpleConv, get_transfer_learning_model_for_surgery, visionTCN, ResNet_ts
 from loss import F1_Loss
 
 import torch
@@ -9,7 +9,7 @@ import tqdm
 import argparse
 import time
 import warnings
-import shelve
+import pkl
 import os
 from collections import defaultdict
 from datetime import datetime
@@ -76,17 +76,20 @@ def train():
     n_classes = 14
 
     if args.model == 'tcn':
-        model = visionTCN(512, [512, 512, 1024], kernel_size=4, dropout=0.3, n_frames=args.n_frames).to(device)
+        model = visionTCN(1024, [256, 256], kernel_size=4, dropout=0.3, n_frames=args.n_frames)
+    if args.model == 'resnet_ts':
+        model = ResNet_ts(args.n_frames)
     else:
-        model = get_transfer_learning_model_for_surgery(args.model).to(device)
-    
+        model = get_transfer_learning_model_for_surgery(args.model)
+    model.to(device) 
+
     # select the desired loss function
     if args.loss == 'cce':
         criterion = nn.CrossEntropyLoss()
     else:
         criterion = F1_Loss()
 
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.5)
     
     # Save training metrics for later visualization and degguing. 
@@ -100,8 +103,7 @@ def train():
             'data_aug_' + ('y' if args.data_aug else 'n'), # was data augmentation used
             now.strftime("%d-%m:%H-%M")                    # date-time of start of training
         ])
-    ) 
-
+    ) + .'pkl' 
 
     # ensure that save file is present.
     path = os.path.join('training_history', args.model)
@@ -109,7 +111,7 @@ def train():
         os.mkdir(path)
 
     N = 50 # print evey N mini-batches
-    metrics = shelve.open(metrics_save_path, writeback=True) 
+    metrics = {}
     for epoch in range(max_epochs):
         model.train()
         epoch_start, i, running_loss = time.time(), 0, 0.0
@@ -171,9 +173,9 @@ def train():
             "val_loss": val_loss / val_batches,
             "val_cm": confusion_matrix
         }
-        metrics.sync()
+        pkl.dump(metrics, open(metrics_save_path, 'wb+'))
+        
 
-    metrics.close()
     if args.save_path != '':
         save(args.save_path, model, optimizer)
 
